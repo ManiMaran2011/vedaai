@@ -317,13 +317,23 @@ function buildHTML(paper: GeneratedPaper): string {
 
 export async function generatePDF(paper: GeneratedPaper): Promise<Buffer> {
   const puppeteer = await import('puppeteer');
+
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
+    || '/usr/bin/google-chrome-stable'
+    || '/usr/bin/chromium-browser'
+    || '/usr/bin/chromium';
+
   const browser = await puppeteer.default.launch({
     headless: true,
+    executablePath,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
     ],
   });
 
