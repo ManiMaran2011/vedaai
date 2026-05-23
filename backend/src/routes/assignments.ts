@@ -85,7 +85,6 @@ router.post('/', createLimiter, upload.single('file'), async (req: Request, res:
     });
 
     res.status(201).json({ assignment: formatAssignment(assignment.toObject()) });
-
     setImmediate(() => runGeneration(assignment._id.toString(), input));
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: 'Validation failed', details: err.errors });
@@ -143,20 +142,36 @@ router.post('/:id/regenerate', async (req: Request, res: Response) => {
   });
 
   res.json({ message: 'Regeneration queued' });
-
   setImmediate(() => runGeneration(req.params.id, assignment.input as AssignmentInput));
+});
+
+// GET /assignments/:id/pdf
+router.get('/:id/pdf', async (req: Request, res: Response) => {
+  if (!mongoose.isValidObjectId(req.params.id))
+    return res.status(400).json({ error: 'Invalid ID' });
+
+  const assignment = await AssignmentModel.findById(req.params.id).lean();
+  if (!assignment) return res.status(404).json({ error: 'Not found' });
+  if (!assignment.paper) return res.status(400).json({ error: 'Paper not generated yet' });
+
+  try {
+    const { generatePDF } = await import('../services/pdf.service.js');
+    const pdf = await generatePDF(assignment.paper as any);
+    const filename = `${assignment.title.replace(/[^a-z0-9]/gi, '_')}_exam.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdf.length);
+    return res.send(pdf);
+  } catch (err) {
+    console.error('[PDF Error]', err);
+    return res.status(500).json({ error: 'PDF generation failed' });
+  }
 });
 
 // Helper
 function formatAssignment(doc: Record<string, unknown>): Record<string, unknown> {
   const id = (doc._id as { toString(): string })?.toString() || doc.id;
-  return {
-    ...doc,
-    id,
-    _id: undefined,
-    __v: undefined,
-  };
+  return { ...doc, id, _id: undefined, __v: undefined };
 }
 
 export { router as assignmentRoutes };
- 
