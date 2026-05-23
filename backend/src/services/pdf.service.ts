@@ -1,352 +1,193 @@
-import type { GeneratedPaper, GeneratedQuestion } from '../types.js';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import type { GeneratedPaper } from '../types.js';
 
-function diffColor(d: string): string {
-  if (d === 'easy') return '#16a34a';
-  if (d === 'hard') return '#dc2626';
-  return '#d97706';
-}
+const BRAND = rgb(0.2, 0.2, 0.2);
+const GRAY  = rgb(0.4, 0.4, 0.4);
+const LIGHT = rgb(0.96, 0.96, 0.96);
+const BLACK = rgb(0, 0, 0);
 
-function diffBg(d: string): string {
-  if (d === 'easy') return '#f0fdf4';
-  if (d === 'hard') return '#fef2f2';
-  return '#fffbeb';
-}
-
-function renderQuestion(q: GeneratedQuestion, index: number): string {
-  const options = q.options
-    ? `<ol class="options">${q.options.map((o, i) =>
-        `<li><span class="opt-label">${String.fromCharCode(97 + i)})</span> ${o}</li>`
-      ).join('')}</ol>`
-    : q.type === 'long_answer'
-      ? `<div class="lines">${'<div class="line"></div>'.repeat(5)}</div>`
-      : q.type === 'diagram'
-        ? `<div class="diagram-box">Draw / attach diagram here</div>`
-        : `<div class="lines">${'<div class="line"></div>'.repeat(2)}</div>`;
-
-  return `
-    <div class="question">
-      <div class="question-header">
-        <span class="question-num">${index}.</span>
-        <span class="question-text">${q.text}</span>
-        <span class="question-meta">
-          <span class="diff-badge" style="color:${diffColor(q.difficulty)};background:${diffBg(q.difficulty)}">${q.difficulty}</span>
-          <span class="marks">[${q.marks} ${q.marks === 1 ? 'Mark' : 'Marks'}]</span>
-        </span>
-      </div>
-      ${options}
-    </div>`;
-}
-
-function buildHTML(paper: GeneratedPaper): string {
-  const sections = paper.sections.map(section => `
-    <div class="section">
-      <div class="section-header">
-        <div class="section-label-row">
-          <span class="section-label">${section.label}</span>
-          <span class="section-marks">[${section.totalMarks} Marks]</span>
-        </div>
-        <div class="section-title">${section.title}</div>
-        <div class="section-instruction">${section.instruction}</div>
-      </div>
-      <div class="questions">
-        ${section.questions.map((q, i) => renderQuestion(q, i + 1)).join('')}
-      </div>
-    </div>
-  `).join('');
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'Times New Roman', Times, serif;
-    font-size: 11pt;
-    color: #111;
-    background: white;
-  }
-
-  .paper {
-    max-width: 210mm;
-    margin: 0 auto;
-    padding: 20mm 18mm;
-  }
-
-  .header {
-    text-align: center;
-    border-bottom: 2px solid #111;
-    padding-bottom: 12px;
-    margin-bottom: 14px;
-  }
-
-  .school-name {
-    font-size: 16pt;
-    font-weight: bold;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  .subject-line {
-    font-size: 11pt;
-    margin-top: 4px;
-    color: #333;
-  }
-
-  .exam-title {
-    font-size: 13pt;
-    font-weight: bold;
-    margin-top: 4px;
-  }
-
-  .meta-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10pt;
-    margin-top: 8px;
-    color: #444;
-  }
-
-  .general-instruction {
-    font-style: italic;
-    font-size: 9.5pt;
-    color: #555;
-    background: #f9f9f9;
-    padding: 6px 10px;
-    border-left: 3px solid #ccc;
-    margin-bottom: 12px;
-  }
-
-  .student-info {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 16px;
-    padding: 10px 0;
-    border-bottom: 1px solid #ddd;
-  }
-
-  .info-field label {
-    font-size: 9pt;
-    color: #666;
-    display: block;
-    margin-bottom: 4px;
-  }
-
-  .info-field .field-line {
-    border-bottom: 1px solid #444;
-    height: 20px;
-  }
-
-  .section {
-    margin-bottom: 20px;
-    page-break-inside: avoid;
-  }
-
-  .section-header {
-    background: #f4f4f4;
-    border-left: 4px solid #333;
-    padding: 8px 12px;
-    margin-bottom: 10px;
-  }
-
-  .section-label-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-
-  .section-label {
-    font-size: 12pt;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
-
-  .section-marks {
-    font-size: 10pt;
-    color: #555;
-  }
-
-  .section-title {
-    font-size: 10.5pt;
-    font-weight: bold;
-    margin-top: 2px;
-  }
-
-  .section-instruction {
-    font-size: 9.5pt;
-    font-style: italic;
-    color: #666;
-    margin-top: 2px;
-  }
-
-  .question {
-    margin-bottom: 14px;
-    page-break-inside: avoid;
-  }
-
-  .question-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .question-num {
-    font-weight: bold;
-    flex-shrink: 0;
-    min-width: 20px;
-    font-size: 10.5pt;
-  }
-
-  .question-text {
-    flex: 1;
-    font-size: 10.5pt;
-    line-height: 1.5;
-  }
-
-  .question-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-    margin-left: 8px;
-  }
-
-  .diff-badge {
-    font-size: 7.5pt;
-    font-family: Arial, sans-serif;
-    font-weight: bold;
-    padding: 1px 6px;
-    border-radius: 10px;
-    text-transform: capitalize;
-  }
-
-  .marks {
-    font-size: 9pt;
-    color: #555;
-    white-space: nowrap;
-    font-family: Arial, sans-serif;
-  }
-
-  .options {
-    list-style: none;
-    margin: 8px 0 0 28px;
-  }
-
-  .options li {
-    font-size: 10pt;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .opt-label {
-    font-weight: bold;
-    min-width: 18px;
-  }
-
-  .lines {
-    margin: 8px 0 0 28px;
-  }
-
-  .line {
-    border-bottom: 1px solid #bbb;
-    height: 22px;
-    margin-bottom: 4px;
-  }
-
-  .diagram-box {
-    margin: 8px 0 0 28px;
-    border: 1px dashed #aaa;
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9pt;
-    color: #999;
-    font-style: italic;
-  }
-
-  .footer {
-    margin-top: 24px;
-    padding-top: 10px;
-    border-top: 1px solid #ddd;
-    display: flex;
-    justify-content: space-between;
-    font-size: 9pt;
-    color: #777;
-  }
-</style>
-</head>
-<body>
-<div class="paper">
-
-  <div class="header">
-    <div class="school-name">${paper.schoolName}</div>
-    <div class="subject-line">Subject: ${paper.subject} &nbsp;|&nbsp; Class: ${paper.grade}</div>
-    <div class="exam-title">${paper.title}</div>
-    <div class="meta-row">
-      <span>Time Allowed: <strong>${paper.duration} minutes</strong></span>
-      <span>Maximum Marks: <strong>${paper.totalMarks}</strong></span>
-    </div>
-  </div>
-
-  <div class="general-instruction">
-    All questions are compulsory unless stated otherwise. Read each question carefully before answering.
-  </div>
-
-  <div class="student-info">
-    <div class="info-field"><label>Name:</label><div class="field-line"></div></div>
-    <div class="info-field"><label>Roll Number:</label><div class="field-line"></div></div>
-    <div class="info-field"><label>Class / Section:</label><div class="field-line"></div></div>
-  </div>
-
-  ${sections}
-
-  <div class="footer">
-    <span>${paper.schoolName} &middot; ${paper.subject} &middot; ${paper.grade}</span>
-    <span>Prepared by: ${paper.teacherName}</span>
-  </div>
-
-</div>
-</body>
-</html>`;
+function diffColor(d: string) {
+  if (d === 'easy')   return rgb(0.09, 0.64, 0.26);
+  if (d === 'hard')   return rgb(0.86, 0.15, 0.15);
+  return rgb(0.85, 0.47, 0.03);
 }
 
 export async function generatePDF(paper: GeneratedPaper): Promise<Buffer> {
-  const puppeteer = await import('puppeteer');
+  const doc  = await PDFDocument.create();
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const reg  = await doc.embedFont(StandardFonts.Helvetica);
+  const it   = await doc.embedFont(StandardFonts.HelveticaOblique);
 
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
-    || '/usr/bin/google-chrome-stable'
-    || '/usr/bin/chromium-browser'
-    || '/usr/bin/chromium';
+  const W = 595, H = 842;
+  const ML = 50, MR = 50, MT = 50;
+  let page = doc.addPage([W, H]);
+  let y = H - MT;
 
-  const browser = await puppeteer.default.launch({
-    headless: true,
-    executablePath,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process',
-    ],
-  });
-
-  try {
-    const page = await browser.newPage();
-    await page.setContent(buildHTML(paper), { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '0', bottom: '0', left: '0', right: '0' },
-    });
-    return Buffer.from(pdf);
-  } finally {
-    await browser.close();
+  function newPage() {
+    page = doc.addPage([W, H]);
+    y = H - MT;
   }
+
+  function checkSpace(needed: number) {
+    if (y - needed < 50) newPage();
+  }
+
+  function drawText(text: string, x: number, size: number, font: typeof bold, color = BLACK, maxWidth?: number) {
+    const usable = maxWidth ?? (W - ML - MR);
+    // Word wrap
+    const words = text.split(' ');
+    let line = '';
+    const lines: string[] = [];
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (font.widthOfTextAtSize(test, size) > usable && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+
+    for (const l of lines) {
+      checkSpace(size + 4);
+      page.drawText(l, { x, y, size, font, color });
+      y -= size + 4;
+    }
+    return lines.length;
+  }
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+  const schoolW = bold.widthOfTextAtSize(paper.schoolName.toUpperCase(), 16);
+  page.drawText(paper.schoolName.toUpperCase(), {
+    x: (W - schoolW) / 2, y, size: 16, font: bold, color: BLACK,
+  });
+  y -= 22;
+
+  const subLine = `Subject: ${paper.subject}  |  Class: ${paper.grade}`;
+  const subW = reg.widthOfTextAtSize(subLine, 11);
+  page.drawText(subLine, { x: (W - subW) / 2, y, size: 11, font: reg, color: GRAY });
+  y -= 16;
+
+  const titleW = bold.widthOfTextAtSize(paper.title, 13);
+  page.drawText(paper.title, { x: (W - titleW) / 2, y, size: 13, font: bold, color: BLACK });
+  y -= 18;
+
+  // divider
+  page.drawLine({ start: { x: ML, y }, end: { x: W - MR, y }, thickness: 1.5, color: BLACK });
+  y -= 12;
+
+  // time + marks row
+  page.drawText(`Time Allowed: ${paper.duration} minutes`, { x: ML, y, size: 10, font: reg, color: GRAY });
+  const mText = `Maximum Marks: ${paper.totalMarks}`;
+  const mW = reg.widthOfTextAtSize(mText, 10);
+  page.drawText(mText, { x: W - MR - mW, y, size: 10, font: reg, color: GRAY });
+  y -= 20;
+
+  // instruction box
+  page.drawRectangle({ x: ML, y: y - 18, width: W - ML - MR, height: 22, color: LIGHT });
+  page.drawText('All questions are compulsory unless stated otherwise.', {
+    x: ML + 6, y: y - 12, size: 9, font: it, color: GRAY,
+  });
+  y -= 30;
+
+  // student info
+  const fieldW = (W - ML - MR - 20) / 3;
+  ['Name:', 'Roll Number:', 'Class / Section:'].forEach((label, i) => {
+    const fx = ML + i * (fieldW + 10);
+    page.drawText(label, { x: fx, y, size: 9, font: reg, color: GRAY });
+    page.drawLine({ start: { x: fx, y: y - 14 }, end: { x: fx + fieldW, y: y - 14 }, thickness: 0.8, color: GRAY });
+  });
+  y -= 30;
+
+  // ── Sections ────────────────────────────────────────────────────────────────
+  for (const section of paper.sections) {
+    checkSpace(60);
+
+    // Section header bar
+    page.drawRectangle({ x: ML, y: y - 36, width: W - ML - MR, height: 40, color: LIGHT });
+    page.drawRectangle({ x: ML, y: y - 36, width: 4, height: 40, color: BRAND });
+    page.drawText(section.label.toUpperCase(), { x: ML + 12, y: y - 12, size: 12, font: bold, color: BLACK });
+    const mks = `[${section.totalMarks} Marks]`;
+    const mksW = reg.widthOfTextAtSize(mks, 10);
+    page.drawText(mks, { x: W - MR - mksW, y: y - 12, size: 10, font: reg, color: GRAY });
+    page.drawText(section.title, { x: ML + 12, y: y - 24, size: 10, font: bold, color: BRAND });
+    y -= 44;
+
+    page.drawText(section.instruction, { x: ML, y, size: 9, font: it, color: GRAY });
+    y -= 16;
+
+    // Questions
+    for (let qi = 0; qi < section.questions.length; qi++) {
+      const q = section.questions[qi];
+      checkSpace(40);
+
+      // Question number
+      page.drawText(`${qi + 1}.`, { x: ML, y, size: 10, font: bold, color: BLACK });
+
+      // Marks badge
+      const mLabel = `[${q.marks}M]`;
+      const mLW = reg.widthOfTextAtSize(mLabel, 8);
+      page.drawText(mLabel, { x: W - MR - mLW, y, size: 8, font: reg, color: GRAY });
+
+      // Difficulty badge
+      const dLabel = q.difficulty;
+      const dLW = reg.widthOfTextAtSize(dLabel, 8);
+      const dX = W - MR - mLW - dLW - 10;
+      page.drawText(dLabel, { x: dX, y, size: 8, font: bold, color: diffColor(q.difficulty) });
+
+      // Question text
+      const qX = ML + 18;
+      const qMaxW = W - ML - MR - 18 - mLW - dLW - 20;
+      const words = q.text.split(' ');
+      let line = '';
+      const lines: string[] = [];
+      for (const w of words) {
+        const test = line ? `${line} ${w}` : w;
+        if (reg.widthOfTextAtSize(test, 10) > qMaxW && line) { lines.push(line); line = w; }
+        else line = test;
+      }
+      if (line) lines.push(line);
+
+      for (let li = 0; li < lines.length; li++) {
+        if (li > 0) { checkSpace(14); }
+        page.drawText(lines[li], { x: qX, y, size: 10, font: reg, color: BLACK });
+        y -= 14;
+      }
+
+      // Options
+      if (q.options) {
+        for (let oi = 0; oi < q.options.length; oi++) {
+          checkSpace(14);
+          const optLabel = String.fromCharCode(97 + oi) + ')';
+          page.drawText(optLabel, { x: qX + 10, y, size: 9, font: bold, color: GRAY });
+          page.drawText(q.options[oi], { x: qX + 28, y, size: 9, font: reg, color: BLACK });
+          y -= 13;
+        }
+      } else {
+        // Answer lines
+        const lineCount = q.type === 'long_answer' ? 4 : 2;
+        for (let li = 0; li < lineCount; li++) {
+          checkSpace(18);
+          page.drawLine({ start: { x: qX, y: y - 8 }, end: { x: W - MR, y: y - 8 }, thickness: 0.5, color: rgb(0.7,0.7,0.7) });
+          y -= 18;
+        }
+      }
+
+      y -= 6;
+    }
+    y -= 10;
+  }
+
+  // Footer
+  checkSpace(20);
+  page.drawLine({ start: { x: ML, y }, end: { x: W - MR, y }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
+  y -= 12;
+  page.drawText(`${paper.schoolName} · ${paper.subject} · ${paper.grade}`, { x: ML, y, size: 8, font: reg, color: GRAY });
+  const prepText = `Prepared by: ${paper.teacherName}`;
+  const prepW = reg.widthOfTextAtSize(prepText, 8);
+  page.drawText(prepText, { x: W - MR - prepW, y, size: 8, font: reg, color: GRAY });
+
+  const bytes = await doc.save();
+  return Buffer.from(bytes);
 }
