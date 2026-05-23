@@ -3,7 +3,9 @@ import multer from 'multer';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { AssignmentModel } from '../models/index.js';
-import { generationQueue, cache } from '../lib/queue.js';
+import { cache } from '../lib/queue.js';
+import { generatePaper } from '../services/ai.service.js';
+import { broadcast } from '../lib/websocket.js';
 import { createLimiter } from '../middleware/rateLimit.js';
 import type { AssignmentInput } from '../types.js';
 
@@ -36,6 +38,26 @@ const CreateSchema = z.object({
   }),
 });
 
+async function runGeneration(assignmentId: string, input: AssignmentInput) {
+  try {
+    await AssignmentModel.findByIdAndUpdate(assignmentId, { status: 'processing' });
+    broadcast(assignmentId, { type: 'job:progress', assignmentId, progress: 5, message: 'Starting generation...' });
+
+    const paper = await generatePaper(input, assignmentId, (progress, message) => {
+      broadcast(assignmentId, { type: 'job:progress', assignmentId, progress, message });
+    });
+
+    await AssignmentModel.findByIdAndUpdate(assignmentId, { status: 'complete', paper, error: undefined });
+    await cache.set(`assignment:${assignmentId}`, paper, 600);
+    broadcast(assignmentId, { type: 'job:complete', assignmentId, paper });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Generation failed';
+    await AssignmentModel.findByIdAndUpdate(assignmentId, { status: 'failed', error: msg });
+    broadcast(assignmentId, { type: 'job:failed', assignmentId, error: msg });
+    console.error('[Generation Error]', msg);
+  }
+}
+
 // POST /assignments
 router.post('/', createLimiter, upload.single('file'), async (req: Request, res: Response) => {
   try {
@@ -62,14 +84,9 @@ router.post('/', createLimiter, upload.single('file'), async (req: Request, res:
       input,
     });
 
-    const job = await generationQueue.add('generate', {
-      assignmentId: assignment._id.toString(),
-      input,
-    });
+    res.status(201).json({ assignment: formatAssignment(assignment.toObject()) });
 
-    await AssignmentModel.findByIdAndUpdate(assignment._id, { jobId: job.id });
-
-    return res.status(201).json({ assignment: formatAssignment(assignment.toObject()) });
+    setImmediate(() => runGeneration(assignment._id.toString(), input));
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: 'Validation failed', details: err.errors });
     console.error('[POST /assignments]', err);
@@ -89,7 +106,6 @@ router.get('/:id', async (req: Request, res: Response) => {
   if (!mongoose.isValidObjectId(req.params.id))
     return res.status(400).json({ error: 'Invalid ID' });
 
-  // Try cache first
   const cached = await cache.get(`assignment:${req.params.id}`);
   if (cached) return res.json({ assignment: cached, source: 'cache' });
 
@@ -126,13 +142,9 @@ router.post('/:id/regenerate', async (req: Request, res: Response) => {
     status: 'pending', paper: null, error: undefined,
   });
 
-  const job = await generationQueue.add('generate', {
-    assignmentId: req.params.id,
-    input: assignment.input,
-  });
+  res.json({ message: 'Regeneration queued' });
 
-  await AssignmentModel.findByIdAndUpdate(req.params.id, { jobId: job.id });
-  return res.json({ message: 'Regeneration queued', jobId: job.id });
+  setImmediate(() => runGeneration(req.params.id, assignment.input as AssignmentInput));
 });
 
 // Helper
@@ -147,3 +159,4 @@ function formatAssignment(doc: Record<string, unknown>): Record<string, unknown>
 }
 
 export { router as assignmentRoutes };
+ 
