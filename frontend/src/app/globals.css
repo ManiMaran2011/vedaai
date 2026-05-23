@@ -95,42 +95,39 @@
     overflow: visible !important;
   }
 
-  html {
-    height: auto !important;
-  }
-
-  #__next {
-    height: auto !important;
-  }
+  html { height: auto !important; }
+  #__next { height: auto !important; }
 
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  .h-full {
+  aside,
+  nav,
+  header,
+  .page-header {
+    display: none !important;
+  }
+
+  .flex.h-full.overflow-hidden {
+    display: block !important;
     height: auto !important;
   }
 
-  .overflow-y-auto,
-  .overflow-hidden {
-    overflow: visible !important;
+  .flex-1.flex.flex-col {
+    display: block !important;
   }
 
   main {
     height: auto !important;
     overflow: visible !important;
+    display: block !important;
   }
 
-  .page-header {
-    position: relative !important;
-  }
-
-  .divide-y > * {
-    page-break-inside: avoid;
-  }
-
-  .mb-5 {
-    page-break-inside: avoid;
-  }
+  .h-full { height: auto !important; }
+  .overflow-y-auto, .overflow-hidden { overflow: visible !important; }
+  .divide-y > * { page-break-inside: avoid; }
+  .mb-5 { page-break-inside: avoid; }
+  .pb-16, .md\:pb-0 { padding-bottom: 0 !important; }
 }
