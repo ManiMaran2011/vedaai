@@ -29,6 +29,9 @@ export const assignmentApi = {
   async regenerate(id: string): Promise<void> {
     await http.post(`/assignments/${id}/regenerate`);
   },
+  getPdfUrl(id: string): string {
+    return `${BASE}/api/assignments/${id}/pdf`;
+  },
 };
 
 export const profileApi = {
