@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Loader2, RefreshCw, Printer, Sparkles,
-  XCircle, ChevronDown, ChevronUp, Eye, EyeOff
+  XCircle, Eye, EyeOff
 } from 'lucide-react';
 import { assignmentApi } from '@/lib/api';
 import { useStore } from '@/store';
@@ -14,12 +14,10 @@ import { format } from 'date-fns';
 import type { GeneratedPaper, GeneratedQuestion } from '@/types';
 import clsx from 'clsx';
 
-// ─── Difficulty badge ─────────────────────────────────────────────────────────
 function DiffBadge({ d }: { d: GeneratedQuestion['difficulty'] }) {
   return <span className={`badge-${d}`}>{d}</span>;
 }
 
-// ─── Single question ──────────────────────────────────────────────────────────
 function QuestionItem({ q, index, showAnswer }: {
   q: GeneratedQuestion; index: number; showAnswer: boolean;
 }) {
@@ -37,8 +35,6 @@ function QuestionItem({ q, index, showAnswer }: {
               </span>
             </div>
           </div>
-
-          {/* MCQ / True-False options */}
           {q.options && (
             <ol className="mt-2.5 space-y-1.5 ml-0">
               {q.options.map((opt, i) => (
@@ -51,8 +47,6 @@ function QuestionItem({ q, index, showAnswer }: {
               ))}
             </ol>
           )}
-
-          {/* Write-in answer lines */}
           {!q.options && (q.type === 'short_answer' || q.type === 'fill_blank') && (
             <div className="mt-2.5 space-y-2">
               <div className="border-b border-gray-300 h-5" />
@@ -74,8 +68,6 @@ function QuestionItem({ q, index, showAnswer }: {
               <span className="text-xs text-gray-400">Draw / attach diagram here</span>
             </div>
           )}
-
-          {/* Answer key inline */}
           {showAnswer && q.answer && (
             <div className="mt-2 bg-green-50 border-l-2 border-green-400 rounded-r-lg px-3 py-2">
               <p className="text-xs text-green-700">
@@ -89,7 +81,6 @@ function QuestionItem({ q, index, showAnswer }: {
   );
 }
 
-// ─── Generating state ─────────────────────────────────────────────────────────
 function GeneratingView({ message, progress }: { message?: string; progress?: number }) {
   const steps = [
     'Building exam prompt...',
@@ -110,44 +101,33 @@ function GeneratingView({ message, progress }: { message?: string; progress?: nu
       <p className="text-sm text-gray-500 mb-8 max-w-sm">
         {message || 'AI is crafting high-quality questions tailored to your requirements...'}
       </p>
-
-      {typeof progress === 'number' && (
-        <div className="w-full max-w-sm">
-          <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-            <span className="truncate pr-2">{message}</span>
-            <span className="flex-shrink-0">{progress}%</span>
-          </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#E8650A] rounded-full progress-stripe transition-all duration-700"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          {/* Steps */}
-          <div className="mt-6 space-y-2 text-left">
-            {steps.map((s, i) => {
-              const pct = (i + 1) * 20;
-              const done = (progress || 0) >= pct;
-              const active = (progress || 0) >= pct - 20 && (progress || 0) < pct;
-              return (
-                <div key={i} className={clsx('flex items-center gap-2.5 text-xs transition-all',
-                  done ? 'text-green-600' : active ? 'text-[#E8650A]' : 'text-gray-300')}>
-                  <div className={clsx('w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-white text-[10px] font-bold',
-                    done ? 'bg-green-400' : active ? 'bg-[#E8650A]' : 'bg-gray-200')}>
-                    {done ? '✓' : i + 1}
-                  </div>
-                  {s}
-                </div>
-              );
-            })}
-          </div>
+      <div className="w-full max-w-sm">
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-6">
+          <div className="h-full bg-[#E8650A] rounded-full progress-stripe transition-all duration-700 animate-pulse"
+            style={{ width: typeof progress === 'number' ? `${progress}%` : '30%' }} />
         </div>
-      )}
+        <div className="space-y-2 text-left">
+          {steps.map((s, i) => {
+            const pct = (i + 1) * 20;
+            const done = (progress || 0) >= pct;
+            const active = (progress || 0) >= pct - 20 && (progress || 0) < pct;
+            return (
+              <div key={i} className={clsx('flex items-center gap-2.5 text-xs transition-all',
+                done ? 'text-green-600' : active ? 'text-[#E8650A]' : 'text-gray-300')}>
+                <div className={clsx('w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-white text-[10px] font-bold',
+                  done ? 'bg-green-400' : active ? 'bg-[#E8650A]' : 'bg-gray-200')}>
+                  {done ? '✓' : i + 1}
+                </div>
+                {s}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── The exam paper ───────────────────────────────────────────────────────────
 function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentId: string }) {
   const [showAnswer, setShowAnswer] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -175,7 +155,6 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
 
   return (
     <div className="animate-fade-in">
-      {/* AI context banner */}
       <div className="bg-[#1C1C1C] px-5 py-3 flex items-center justify-between gap-4 no-print">
         <div className="flex items-center gap-2.5 min-w-0">
           <Sparkles size={14} className="text-[#E8650A] flex-shrink-0" />
@@ -190,7 +169,6 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
         </button>
       </div>
 
-      {/* Action bar */}
       <div className="flex items-center gap-2 px-5 py-3 bg-white border-b border-gray-100 flex-wrap no-print">
         <button onClick={handleRegenerate} disabled={regenerating} className="btn-ghost text-xs">
           <RefreshCw size={12} className={regenerating ? 'animate-spin' : ''} />
@@ -199,9 +177,7 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
         <button onClick={() => window.print()} className="btn-ghost text-xs">
           <Printer size={12} /> Print
         </button>
-
         <div className="ml-auto flex items-center gap-3">
-          {/* Difficulty pill row */}
           <div className="flex items-center gap-1.5">
             {(['easy', 'medium', 'hard'] as const).map(d => diffBreakdown[d] > 0 && (
               <span key={d} className={`badge-${d}`}>{diffBreakdown[d]} {d}</span>
@@ -213,11 +189,8 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
         </div>
       </div>
 
-      {/* EXAM PAPER */}
       <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-
-          {/* School + paper header */}
           <div className="px-8 py-6 border-b border-gray-200 text-center">
             <h1 className="text-lg font-bold text-gray-900 uppercase tracking-wider">
               {paper.schoolName}
@@ -236,14 +209,12 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
             </div>
           </div>
 
-          {/* General instruction */}
           <div className="px-8 py-3 bg-gray-50 border-b border-gray-100">
             <p className="text-xs text-gray-600 italic">
               All questions are compulsory unless stated otherwise. Read each question carefully before answering.
             </p>
           </div>
 
-          {/* Student info fields */}
           <div className="px-8 py-5 border-b border-gray-100">
             <div className="grid grid-cols-3 gap-6">
               {['Name', 'Roll Number', 'Class / Section'].map(label => (
@@ -255,21 +226,17 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
             </div>
           </div>
 
-          {/* Sections */}
           <div className="divide-y divide-gray-100">
             {paper.sections.map((section) => (
               <div key={section.id} className="px-8 py-6">
                 <div className="mb-5">
                   <div className="flex items-baseline justify-between">
-                    <h2 className="text-sm font-bold text-gray-900 uppercase">
-                      {section.label}
-                    </h2>
+                    <h2 className="text-sm font-bold text-gray-900 uppercase">{section.label}</h2>
                     <span className="text-xs text-gray-500">[{section.totalMarks} Marks]</span>
                   </div>
                   <h3 className="text-sm font-semibold text-gray-700 mt-0.5">{section.title}</h3>
                   <p className="text-xs text-gray-500 italic mt-0.5">{section.instruction}</p>
                 </div>
-
                 <div>
                   {section.questions.map((q, qi) => (
                     <QuestionItem key={q.id} q={q} index={qi + 1} showAnswer={showAnswer} />
@@ -279,7 +246,6 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
             ))}
           </div>
 
-          {/* Answer key section (only when toggled) */}
           {showAnswer && (
             <div className="border-t-2 border-dashed border-gray-300 px-8 py-6 bg-gray-50 animate-fade-up">
               <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-5 flex items-center gap-2">
@@ -304,7 +270,6 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
             </div>
           )}
 
-          {/* Footer */}
           <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
             <span>{paper.schoolName} · {paper.subject} · {paper.grade}</span>
             <span>Prepared by: {paper.teacherName}</span>
@@ -315,7 +280,6 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
 export default function AssignmentOutputPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -324,6 +288,7 @@ export default function AssignmentOutputPage() {
   const { add: toast } = useToast();
   useWebSocket(id);
 
+  // Initial load
   useEffect(() => {
     assignmentApi.get(id)
       .then(setCurrent)
@@ -333,6 +298,24 @@ export default function AssignmentOutputPage() {
       })
       .finally(() => setPageLoading(false));
   }, [id, setCurrent, router, toast]);
+
+  // Polling fallback — kicks in when WebSocket doesn't deliver updates
+  useEffect(() => {
+    if (!current) return;
+    if (current.status === 'complete' || current.status === 'failed') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const updated = await assignmentApi.get(id);
+        setCurrent(updated);
+        if (updated.status === 'complete' || updated.status === 'failed') {
+          clearInterval(interval);
+        }
+      } catch { /* ignore */ }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [id, current?.status, setCurrent]);
 
   if (pageLoading) return (
     <div className="flex items-center justify-center h-full">
@@ -345,7 +328,6 @@ export default function AssignmentOutputPage() {
 
   return (
     <div className="h-full overflow-y-auto pb-16 md:pb-0">
-      {/* Breadcrumb header */}
       <div className="page-header no-print">
         <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-2">
           <Link href="/assignments" className="hover:text-[#E8650A] transition-colors">Assignments</Link>
@@ -382,7 +364,6 @@ export default function AssignmentOutputPage() {
         </div>
       </div>
 
-      {/* Content based on status */}
       {(current.status === 'pending' || current.status === 'processing') && (
         <GeneratingView message={prog?.message} progress={prog?.progress} />
       )}
