@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Loader2, RefreshCw, Printer, Sparkles,
-  XCircle, Eye, EyeOff
+  XCircle, Eye, EyeOff, Download
 } from 'lucide-react';
 import { assignmentApi } from '@/lib/api';
 import { useStore } from '@/store';
@@ -177,6 +177,14 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
         <button onClick={() => window.print()} className="btn-ghost text-xs">
           <Printer size={12} /> Print
         </button>
+        
+          href={assignmentApi.getPdfUrl(assignmentId)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-ghost text-xs"
+        >
+          <Download size={12} /> Download PDF
+        </a>
         <div className="ml-auto flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             {(['easy', 'medium', 'hard'] as const).map(d => diffBreakdown[d] > 0 && (
@@ -288,7 +296,6 @@ export default function AssignmentOutputPage() {
   const { add: toast } = useToast();
   useWebSocket(id);
 
-  // Initial load
   useEffect(() => {
     assignmentApi.get(id)
       .then(setCurrent)
@@ -299,7 +306,6 @@ export default function AssignmentOutputPage() {
       .finally(() => setPageLoading(false));
   }, [id, setCurrent, router, toast]);
 
-  // Polling fallback — kicks in when WebSocket doesn't deliver updates
   useEffect(() => {
     if (!current) return;
     if (current.status === 'complete' || current.status === 'failed') return;
