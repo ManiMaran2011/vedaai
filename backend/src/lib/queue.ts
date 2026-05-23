@@ -2,20 +2,20 @@ import Redis from 'ioredis';
 import { Queue } from 'bullmq';
 import { config } from '../config/index.js';
 
-// Shared Redis client
 export const redis = new Redis(config.redisUrl, {
-  maxRetriesPerRequest: null,
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => {
+    if (times > 3) return null; // stop retrying
+    return Math.min(times * 500, 2000);
+  },
+  enableOfflineQueue: false,
   lazyConnect: true,
-  retryStrategy: (times) => Math.min(times * 200, 5000),
+  tls: config.redisUrl.startsWith('rediss://') ? {} : undefined,
 });
 
-redis.on('error', (err) => {
-  if (config.isDev) console.warn('[Redis]', err.message);
-});
-
+redis.on('error', () => {}); // suppress error spam
 redis.on('connect', () => console.log('  → Redis connected'));
 
-// BullMQ queue
 export const generationQueue = new Queue('generation', {
   connection: { url: config.redisUrl },
   defaultJobOptions: {
@@ -26,7 +26,6 @@ export const generationQueue = new Queue('generation', {
   },
 });
 
-// Cache helpers
 export const cache = {
   async get<T>(key: string): Promise<T | null> {
     try {
