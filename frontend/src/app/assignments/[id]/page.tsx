@@ -177,7 +177,7 @@ function PaperView({ paper, assignmentId }: { paper: GeneratedPaper; assignmentI
         <button onClick={() => window.print()} className="btn-ghost text-xs">
           <Printer size={12} /> Print
         </button>
-        
+        <a
           href={assignmentApi.getPdfUrl(assignmentId)}
           target="_blank"
           rel="noopener noreferrer"
