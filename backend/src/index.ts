@@ -12,6 +12,7 @@ import { profileRoutes } from './routes/profile.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // ─── Security & logging ───────────────────────────────────────────────────────
