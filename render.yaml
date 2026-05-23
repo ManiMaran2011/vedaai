@@ -1,0 +1,43 @@
+services:
+  # ─── Backend API ────────────────────────────────────────────────────────────
+  - type: web
+    name: vedaai-backend
+    env: node
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: MONGODB_URI
+        sync: false   # set in Render dashboard
+      - key: REDIS_URL
+        sync: false   # set in Render dashboard
+      - key: GROQ_API_KEY
+        sync: false   # set in Render dashboard
+      - key: FRONTEND_URL
+        sync: false   # set to your Vercel URL
+
+  # ─── Generation Worker ──────────────────────────────────────────────────────
+  - type: worker
+    name: vedaai-worker
+    env: node
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false

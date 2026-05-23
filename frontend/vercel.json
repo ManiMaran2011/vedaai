@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@vedaai_api_url",
+    "NEXT_PUBLIC_WS_URL": "@vedaai_ws_url"
+  }
+}
