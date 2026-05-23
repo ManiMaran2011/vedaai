@@ -19,15 +19,8 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan(config.isDev ? 'dev' : 'combined'));
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-const allowedOrigins = config.frontendUrl.split(',').map(u => u.trim());
 app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-      cb(null, true);
-    } else {
-      cb(new Error(`CORS: ${origin} not allowed`));
-    }
-  },
+  origin: 'https://vedaai-website.vercel.app',
   credentials: true,
 }));
 
